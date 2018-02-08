@@ -9,25 +9,34 @@
 
 #define MAX_LINE 80 /* The maximum length command */
 
-char history[10][MAX_LINE];
+char **history;
 
 char *readInput(void);
-char **breakingUpIsHardToDo(char *input, int *andFlag);
-
+char **breakingUpIsHardToDo(char *, int *);
+void addToHistory(char *);
+void determineHistory(char **, int *);
+void display(void);
+//gcc -Wall -g -std=c99 programming_project1.c -o programming_project1
 int main(void) {
   char **args; /* command line arguments */
-  char history[10][MAX_LINE];
   char *input;
   int andFlag = 0;
+  history = malloc(sizeof(char *) * 10)
+  for (int i = 0; i < 10; ++i) {
+    history[i] = "\0";
+  }
   int should_run = 1; /* flag to determine when to exit program */
   while (should_run) {
     printf("osh>");
     fflush(stdout);
     input = readInput();
-    //TODO addHistory(input)
+    addToHistory(input);
     args = breakingUpIsHardToDo(input, &andFlag);
+    determineHistory(args, &andFlag);
+
     // After reading user input, the steps are:
     // (1) fork a child process using fork()
+
     pid_t pid;
     pid = fork();
     if (pid < 0) {
@@ -44,6 +53,47 @@ int main(void) {
     }
   }
   return 0;
+}
+
+void addToHistory(char *input) {
+  if (history[0] == '\0')
+      history[0] == input;
+  else {
+    for (int i = 8; i > -1; --i) {
+      history[i+1] = history[i];
+    }
+    history[0] = input;
+  }
+}
+
+void determineHistory(char **args, int *andFlag) {
+  int historyNo;
+  if (strcmp(args[0], "history") == 0) {
+    display();
+  }
+  if (args[0][0] == '!' && args[0][1] =='!')
+    args = breakingUpIsHardToDo(history[0], andFlag);
+  else if (args[0][0] == '!') {
+    if (!isdigit(args[0][1])) {
+      fprintf(stderr,"\nInvalid Digit. Check that an Integer is used.\n");
+      exit(-1);
+    }
+    historyNo = args[0][1] - '0';
+    --historyNo;
+    if (historyNo > 9) {
+      fprintf(stderr,"\nInvalid Digit. Check that Integer is <= 10\n");
+      exit(-1);
+    }
+    else if (history[historyNo][0] == '\0') {
+      fprintf(stderr,"\nInvalid Digit. Not Enough Commands in History\n");
+      exit(-1);
+    }
+    else {
+    args = breakingUpIsHardToDo(history[historyNo], andFlag);
+    addToHistory(history[historyNo]);
+    }
+
+  }
 }
 
 char *readInput(void) {
@@ -85,30 +135,21 @@ char **breakingUpIsHardToDo(char *input, int *andFlag) {
    return daddy;
 }
 
-/*
 void display() {
-  int x = 0;
-  int y = 0;
-  int historyCount = count;
-
   //walk array
-  while (x < 10 || historyCount == 0) {
-      printf("%d.\t", historyCount);
-      while (history[x][y] != '\n' && history[x][y] != '\0') {
-	       //print
-          printf("%c", history[x][y]);
-          y++;
+  int i = 9;
+  while (i > -1) {
+      if (strcmp(history[i], "\0") == 0) {
+        --i;
       }
-      printf("\n");
-      //reset values
-      y = 0;
-      historyCount--;
-      ++x;
+      else {
+        printf("%d.\t", i);
+        printf("%s\n", history[i]);
+        --i;
+      }
   }
-  printf("\n");
 }
-
-
+/*
 void history(char *command) {
 
   if(strcmp(command,"history")==0) {
