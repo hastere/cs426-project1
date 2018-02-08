@@ -1,0 +1,188 @@
+#include <stdio.h>
+#include <unistd.h>
+
+#define MAX_LINE 80 /* The maximum length command */
+
+char history[10][MAX_LINE];
+
+
+int main(void) {
+  char *args[MAX_LINE/2 + 1]; /* command line arguments */
+  int should run = 1; /* flag to determine when to exit program */
+  while (should run) {
+    printf("osh>");
+    fflush(stdout);
+
+    readInput()
+    // After reading user input, the steps are:
+    // (1) fork a child process using fork()
+    pid_t pid;
+    pid = fork();
+    if (pid < 0) {
+      printf("Error: Cannot Fork Child\n");
+      return;
+    }
+    // (2) the child process will invoke execvp()
+    else if (pid == 0)
+      execvp(args[0], args);
+    // (3) if command included &, parent will invoke wait()
+    else if (andFlag)
+      wait(NULL);
+    return;
+  }
+  return 0;
+}
+
+void display() {
+  int x = 0;
+  int y = 0;
+  int historyCount = count;
+
+  //walk array
+  while (x < 10 || historyCount == 0) {
+      printf("%d.\t", historyCount);
+      while (history[x][y] != '\n' && history[x][y] != '\0') {
+	       //print
+          printf("%c", history[x][y]);
+          y++;
+      }
+      printf("\n");
+      //reset values
+      y = 0;
+      historyCount--;
+      ++x;
+  }
+  printf("\n");
+}
+
+char **clean(char input[], int length, int *andFlag) {
+  int start;
+  int counter = 0; // index of where to place the next parameter into args[]
+  char *cleanInput[] =;
+  int i;
+  for (i = 0; i < length; i++) {
+      if (inputBuffer[i] == ' ')
+
+      if (inputBuffer[i] == '\t') {
+        if(start != -1) {
+          cleanInput[counter] = &input[start];
+          ct++;
+        }
+        inputBuffer[i] = '\0'; // add a null char at the end
+        start = -1;
+
+      }
+      else if (inputBuffer[i] == '\n')
+        if (start != -1) {
+          cleanInput[counter] = &input[start];
+          ct++;
+        }
+        input[i] = '\0';
+        cleanInput[ct] = NULL;
+      else {
+        if (start == -1)
+          start = i;
+        if (input[i] == '&') {
+          *andFlag  = 1; //this flag is the differentiate whether the child process is invoked in background
+          input[i] = '\0';
+        }
+      }
+  }
+  return cleanInput;
+}
+
+
+   if(count>0)
+      displayHistory();
+    else
+      printf("\nNo Commands in the history\n");
+    return;
+  }
+
+  else if (args[0][0]- '!' == 0) {
+    int x = args[0][1]- '0';
+    int z = args[0][2]- '0';
+
+    if(x>count) {
+      printf("\nNo Such Command in the history\n");
+      strcpy(inputBuffer,"Wrong command");
+  cleanInput = clean;
+    else if (z!=-48) {
+  args[ct] = NULL; //if the input line was > 80
+d in the history. Enter <=!9 (buffer size is 10 along with current command)\n");
+      strcpyargser,"Wrong command");
+    }
+}   if(count>0)
+    else
+      else
+   return -1;
+     }
+
+  else if (args[0][0]- '!' == 0) {
+    int x = args[0][1]- '0';
+    int z = args[0][2]- '0';
+
+    if(x>count) {
+      printf("\nNo Such Command in the history\n");
+      strcpy(inputBuffer,"Wrong command");
+    }
+    else if (z!=-48) {
+      printf("\nNo Such Command in the history. Enter <=!9 (buffer size is 10 along with current command)\n");
+      strcpy(inputBuffer,"Wrong command");
+    }
+}
+int readInput(char inputBuffer[], int *andFlag) {
+  int length; // # of chars in command line
+  int i;     // loop index for inputBuffer
+  int start;  // index of beginning of next command
+  int ct = 0; // index of where to place the next parameter into args[]
+  int hist;
+
+  //read user input on command line and checking whether the command is !! or !n
+ 	length = read(STDIN_FILENO, inputBuffer, MAX_LINE);
+  start = -1;
+  if (length == 0 || length > 80)
+    exit(0);   //end of command
+
+  cleanInput = clean(inputBuffer, length, &andFlag);
+
+  historyCheck(cleanInput[0]);
+  if(strcmp(cleanInput[0],"history")==0) {
+    if(count>0)
+      displayHistory();
+    else
+		  printf("\nNo Commands in the history\n");
+	  return;
+  }
+
+  else if (args[0][0]- '!' == 0) {
+    int x = args[0][1]- '0';
+		int z = args[0][2]- '0';
+
+	  if(x>count) {
+		  printf("\nNo Such Command in the history\n");
+		  strcpy(inputBuffer,"Wrong command");
+		}
+	  else if (z!=-48) {
+		  printf("\nNo Such Command in the history. Enter <=!9 (buffer size is 10 along with current command)\n");
+		  strcpy(inputBuffer,"Wrong command");
+	  }
+	  else {
+		  if(x==-15)
+        strcpy(inputBuffer,history[0]);  // this will be your 10 th(last) command
+		  else if(x==0) {
+        printf("Enter proper command");
+			  strcpy(inputBuffer,"Wrong command");
+		  }
+		  else if(x>=1)
+			  strcpy(inputBuffer,history[count-x]);
+		  }
+	}
+  for (i = 9;i>0; i--) //Moving the history elements one step higher
+   	strcpy(history[i], history[i-1]);
+
+    strcpy(history[0],inputBuffer); //Updating the history array with input buffer
+    count++;
+	if(count>10)
+	  count=10;
+}
