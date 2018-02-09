@@ -10,69 +10,116 @@
 #define MAX_LINE 80 /* The maximum length command */
 
 char **history;
+int historycount = 0;
+int should_run;
+int andFlag;
 
 char *readInput(void);
-char **breakingUpIsHardToDo(char *, int *);
+char **breakingUpIsHardToDo(char *);
 void addToHistory(char *);
-void determineHistory(char **, int *);
+char **determineHistory(char **);
 void display(void);
+char *putUTogether(char **);
+char **clearAmpersand(char **);
 //gcc -Wall -g -std=c99 programming_project1.c -o programming_project1
 int main(void) {
   char **args; /* command line arguments */
   char *input;
-  int andFlag = 0;
-  history = malloc(sizeof(char *) * 10)
+  andFlag = 0;
+
+  //Allocate/Initialize History
+  history = malloc(sizeof(char *) * 10);
   for (int i = 0; i < 10; ++i) {
     history[i] = "\0";
   }
-  int should_run = 1; /* flag to determine when to exit program */
+  should_run = 1; /* flag to determine when to exit program */
+
   while (should_run) {
     printf("osh>");
     fflush(stdout);
+    //Read in from commandline
     input = readInput();
-    addToHistory(input);
-    args = breakingUpIsHardToDo(input, &andFlag);
-    determineHistory(args, &andFlag);
-
-    // After reading user input, the steps are:
-    // (1) fork a child process using fork()
-
+    //break into arguments
+    args = breakingUpIsHardToDo(input);
+    //determine if they are special arguements
+    args = determineHistory(args);
+    //clear the ampersand
+    args = clearAmpersand(args);
+    if (should_run == 0)
+      return 1;
+    //Begin forking logic
     pid_t pid;
     pid = fork();
     if (pid < 0) {
       fprintf(stderr,"\nCannot Fork Child\n");
       exit(-1);
     }
-    // (2) the child process will invoke execvp()
-    else if (pid == 0)
+    else if (pid == 0) {
       execvp(args[0], args);
-    // (3) if command included &, parent will invoke wait()
+      return 0;
+      }
     else {
-      if (!andFlag)
+       if (andFlag == 0)
         wait(NULL);
     }
+    //reset andFlag
   }
   return 0;
 }
 
+char **clearAmpersand(char **args) {
+  int i;
+  //looks for &, and removes it from args
+  for (i = 0; args[i] != NULL; ++i) {
+    if (strcmp(args[i], "&") == 0) {
+      andFlag = i;
+    }
+  }
+  if (andFlag != 0) {
+    i = andFlag;
+    while (args[i] != NULL && i < (MAX_LINE - 1)) {
+      args[i] = args[i + 1];
+      ++i;
+    }
+    args[i] = NULL;
+  }
+
+  return args;
+}
+
 void addToHistory(char *input) {
+  //for the initial value, just place in first spot
   if (history[0] == '\0')
-      history[0] == input;
+      history[0] = input;
+  //else, move values down array until first spot is freed
   else {
     for (int i = 8; i > -1; --i) {
       history[i+1] = history[i];
     }
     history[0] = input;
   }
+  //update count of commands
+  ++historycount;
 }
 
-void determineHistory(char **args, int *andFlag) {
+char **determineHistory(char **args) {
   int historyNo;
+  char *command;
+
+  //if history, display history
   if (strcmp(args[0], "history") == 0) {
     display();
   }
-  if (args[0][0] == '!' && args[0][1] =='!')
-    args = breakingUpIsHardToDo(history[0], andFlag);
+  //if !!, replace with last command if it exists
+  else if (args[0][0] == '!' && args[0][1] =='!') {
+    if (history[0] == '\0') {
+      fprintf(stderr,"\nNo Commands in History\n");
+      exit(-1);
+    }
+    args = breakingUpIsHardToDo(history[0]);
+    addToHistory(history[0]);
+  }
+  //if !, check for validity and then replace args with args from history
   else if (args[0][0] == '!') {
     if (!isdigit(args[0][1])) {
       fprintf(stderr,"\nInvalid Digit. Check that an Integer is used.\n");
@@ -89,17 +136,41 @@ void determineHistory(char **args, int *andFlag) {
       exit(-1);
     }
     else {
-    args = breakingUpIsHardToDo(history[historyNo], andFlag);
+    args = breakingUpIsHardToDo(history[historyNo]);
     addToHistory(history[historyNo]);
     }
+  }
+  //if exit, exit
+  else if(strcmp(args[0], "exit") == 0) {
+    printf("should exit....\n");
+    should_run = 0;
+  }
+  //else, put args together and add to history
+  else {
+    command = putUTogether(args);
+    addToHistory(command);
+  }
+  return args;
+}
+
+char *putUTogether(char **args) {
+  //puts args into a single line
+  char *togetherAgain = malloc(sizeof(char) * MAX_LINE);
+  strcat(togetherAgain, args[0]);
+  for(int i = 1; args[i] != NULL; ++i) {
+    strcat(togetherAgain, " ");
+    strcat(togetherAgain, args[i]);
 
   }
+  strcat(togetherAgain, "\0");
+  return togetherAgain;
 }
 
 char *readInput(void) {
+  //reads input, one character at a time.
   char *input = malloc(sizeof(char) * MAX_LINE);
   int i = 0;
-
+  andFlag = 0;
   i = 0;
   char readChar = getchar();
   while (readChar != '\n' && i < MAX_LINE) {
@@ -107,16 +178,13 @@ char *readInput(void) {
     readChar = getchar();
     ++i;
   }
-  //TODO
-  /*if (!getchar()) {
-    fprintf(stderr,"Command Size Too Long");
-    exit(-1);
-  }*/
+
   input[i] = '\0';
   return input;
 }
 
-char **breakingUpIsHardToDo(char *input, int *andFlag) {
+char **breakingUpIsHardToDo(char *input) {
+  //breaks line of args into individual arguments, places into 2d array;
   int i;
   char **daddy = malloc(sizeof(char *) * MAX_LINE);
   //intiialize
@@ -132,94 +200,24 @@ char **breakingUpIsHardToDo(char *input, int *andFlag) {
     token = strtok (NULL, " \t\n");
     ++i;
   }
+  daddy[i] = NULL;
+
    return daddy;
 }
 
 void display() {
-  //walk array
+  //walk history array, print commands
+  int count = historycount;
   int i = 9;
   while (i > -1) {
       if (strcmp(history[i], "\0") == 0) {
         --i;
       }
       else {
-        printf("%d.\t", i);
+        printf("%d.\t", count);
         printf("%s\n", history[i]);
         --i;
+        --count;
       }
   }
 }
-/*
-void history(char *command) {
-
-  if(strcmp(command,"history")==0) {
-    if(count>0)
-      display();
-    else
-        printf("No Commands\n");
-  }
-  // !! case
-  else if (command[0] == '!' && command[1] == '!')
-    strcpy(inputBuffer,history[0]);
-  // !n case
-  else if(command[0] == '!') {
-    if (!isdigit(command[1] || !isdigit(command[2]))
-      printf("Invalid format.\n");
-    else {
-      if (command[2] = '\0')
-        strcpy(inputBuffer,history[count-x]);
-      else
-    }
-      }
-}
-int formatCommand(char inputBuffer[], char *args[],int *flag) {
-  int hist;
-  //read user input on command line and checking whether the command is !! or !n
-
-  int length; // # of chars in command line
- 	length = read(STDIN_FILENO, inputBuffer, MAX_LINE);
-  start = -1;
-  if (length == 0 || length > 80)
-    exit(0);   //end of command
-
-  char **cleanInput = clean(inputBuffer, length, &flag)
-  if(strcmp(args[0],"history")==0) {
-    if(count>0)
-      displayHistory();
-    else
-		    printf("\nNo Commands in the history\n");
-	  return -1;
-    }
-  else if (args[0][0]-'!' ==0) {
-    int x = args[0][1]- '0';
-		int z = args[0][2]- '0';
-
-	  if(x>count) {
-		  printf("\nNo Such Command in the history\n");
-		  strcpy(inputBuffer,"Wrong command");
-		}
-	  else if (z!=-48) {
-		  printf("\nNo Such Command in the history. Enter <=!9 (buffer size is 10 along with current command)\n");
-		  strcpy(inputBuffer,"Wrong command");
-	  }
-	  else {
-		  if(x==-15)
-        strcpy(inputBuffer,history[0]);  // this will be your 10 th(last) command
-		  else if(x==0) {
-        printf("Enter proper command");
-			  strcpy(inputBuffer,"Wrong command");
-		  }
-		  else if(x>=1)
-			  strcpy(inputBuffer,history[count-x]);
-		  }
-	}
-  int i;
-  for (i = 9;i>0; i--) //Moving the history elements one step higher
-   	strcpy(history[i], history[i-1]);
-
-    strcpy(history[0],inputBuffer); //Updating the history array with input buffer
-    count++;
-	if(count>10)
-	  count=10;
-}
-*/
